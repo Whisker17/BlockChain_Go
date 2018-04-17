@@ -3,12 +3,15 @@ package src
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 	"log"
+	"math/big"
+	"strings"
 )
 
 const subsidy = 10
@@ -75,4 +78,100 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 		tx.Vin[inID].Signature = signature
 		txCopy.Vin[inID].PubKey = nil
 	}
+}
+
+func (tx Transaction) String() string {
+	var lines []string
+	lines = append(lines, fmt.Sprintf("--- Transaction %x:", tx.ID))
+
+	for i, input := range tx.Vin {
+		lines = append(lines, fmt.Sprintf("     Input %d:", i))
+		lines = append(lines, fmt.Sprintf("       TXID:      %x", input.Txid))
+		lines = append(lines, fmt.Sprintf("       Out:       %d", input.Vout))
+		lines = append(lines, fmt.Sprintf("       Signature: %x", input.Signature))
+		lines = append(lines, fmt.Sprintf("       PubKey:    %x", input.PubKey))
+	}
+
+	for i, output := range tx.Vout {
+		lines = append(lines, fmt.Sprintf("     Output %d:", i))
+		lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
+		lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash))
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+func (tx *Transaction) TrimmedCopy() Transaction {
+	var inputs []TXInput
+	var outputs []TXOutput
+
+	for _, vin := range tx.Vin {
+		inputs = append(inputs, TXInput{vin.Txid, vin.Vout, nil, nil})
+	}
+
+	for _, vout := range tx.Vout {
+		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash})
+	}
+
+	txCopy := Transaction{tx.ID, inputs, outputs}
+
+	return txCopy
+}
+
+func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
+	if tx.IsCoinbase() {
+		return true
+	}
+
+	for _, vin := range tx.Vin {
+		if prevTXs[hex.EncodeToString(vin.Txid)].ID == nil {
+			log.Panic("ERROR: Previous transaction is not correct")
+		}
+	}
+
+	txCopy := tx.TrimmedCopy()
+	curve := elliptic.P256()
+
+	for inID, vin := range tx.Vin {
+		prevTX := prevTXs[hex.EncodeToString(vin.Txid)]
+		txCopy.Vin[inID].Signature = nil
+		txCopy.Vin[inID].PubKey = prevTX.Vout[vin.Vout].PubKeyHash
+
+		r := big.Int{}
+		s := big.Int{}
+		sigLen := len(vin.Signature)
+		r.SetBytes(vin.Signature[:(sigLen / 2)])
+		s.SetBytes(vin.Signature[(sigLen / 2):])
+
+		x := big.Int{}
+		y := big.Int{}
+		keyLen := len(vin.PubKey)
+		x.SetBytes(vin.PubKey[:(keyLen / 2)])
+		y.SetBytes(vin.PubKey[(keyLen / 2):])
+
+		dataToVerify := fmt.Sprintf("%x\n", txCopy)
+
+		rawPubKey := ecdsa.PublicKey{curve, &x, &y}
+		if ecdsa.Verify(&rawPubKey, []byte(dataToVerify), &r, &s) == false {
+			return false
+		}
+		txCopy.Vin[inID].PubKey = nil
+	}
+
+	return true
+}
+
+func NewCoinbaseTX(to, data string) *Transaction {
+	if data == "" {
+		randData := make([]byte, 20)
+		_, err := rand.Read(randData)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		data = fmt.Sprintf("%x", randData)
+	}
+
+	txin := TXInput{[]byte{}, -1, nil, []byte(data)}
+
 }
