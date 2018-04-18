@@ -1,25 +1,25 @@
 package main
 
 import (
-	"time"
 	"bytes"
 	"encoding/gob"
 	"log"
+	"time"
 )
 
 type Block struct {
-	Timestamp int64
-	Transactions []*Transaction
+	Timestamp     int64
+	Transactions  []*Transaction
 	PrevBlockHash []byte
-	Hash []byte
-	Nonce int
-	Height int
+	Hash          []byte
+	Nonce         int
+	Height        int
 }
 
-func NewBlock(transactions []*Transaction,prevBlockHash []byte,height int) *Block {
-	block := &Block{time.Now().Unix(),transactions,prevBlockHash,[]byte{},0,height}
+func NewBlock(transactions []*Transaction, prevBlockHash []byte, height int) *Block {
+	block := &Block{time.Now().Unix(), transactions, prevBlockHash, []byte{}, 0, height}
 	pow := NewProofOfWork(block)
-	nonce,hash := pow.Run()
+	nonce, hash := pow.Run()
 
 	block.Hash = hash[:]
 	block.Nonce = nonce
@@ -28,14 +28,14 @@ func NewBlock(transactions []*Transaction,prevBlockHash []byte,height int) *Bloc
 }
 
 func NewGenesisBlock(coinbase *Transaction) *Block {
-	return NewBlock([]*Transaction{coinbase},[]byte{},0)
+	return NewBlock([]*Transaction{coinbase}, []byte{}, 0)
 }
 
 func (b *Block) HashTransactions() []byte {
 	var transactions [][]byte
 
-	for _,tx := range b.Transactions {
-		transactions = append(transactions,tx.Serialize())
+	for _, tx := range b.Transactions {
+		transactions = append(transactions, tx.Serialize())
 	}
 	mTree := NewMerkleTree(transactions)
 
@@ -46,8 +46,8 @@ func (b *Block) Serialize() []byte {
 	var result bytes.Buffer
 	encoder := gob.NewEncoder(&result)
 
-	err := encoder.Encode()
-	if err !=nil {
+	err := encoder.Encode(b)
+	if err != nil {
 		log.Panic(err)
 	}
 
@@ -59,7 +59,7 @@ func DeserializeBlock(d []byte) *Block {
 
 	decoder := gob.NewDecoder(bytes.NewReader(d))
 	err := decoder.Decode(&block)
-	if err := nil {
+	if err != nil {
 		log.Panic(err)
 	}
 
