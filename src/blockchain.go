@@ -144,7 +144,7 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 		}
 	}
 
-	return Transaction{}, errors.New("Transaction is not found")
+	return Transaction{}, errors.New("Transaction is not found.")
 }
 
 func (bc *Blockchain) FindUTXO() map[string]TXOutputs {
