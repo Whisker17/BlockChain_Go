@@ -11,12 +11,16 @@ type TXOutput struct {
 	PubKeyHash []byte
 }
 
+//简单的锁定一个账户
+//将地址解码，从中提取出公钥哈希并保存在 PubKeyHash 字段
 func (out *TXOutput) Lock(address []byte) {
 	pubKeyHash := Base58Decode(address)
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
 	out.PubKeyHash = pubKeyHash
 }
 
+//检查是否提供的公钥哈希被用于锁定输出
+//这是一个 UsesKey 的辅助函数，并且它们都被用于 FindUnspentTransactions 来形成交易之间的联系。
 func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {
 	return bytes.Compare(out.PubKeyHash, pubKeyHash) == 0
 }

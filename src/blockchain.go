@@ -11,6 +11,12 @@ import (
 	"os"
 )
 
+//BoltDB简介：https://github.com/boltdb/bolt
+//BoltDB是一个纯键值存储的DB，没有行和列
+//键值对被存储在bucket中，这样就可以将相似的键值对进行分组
+//为了获取一个值，你需要知道一个bucket和一个key
+//BoltDB没有数据类型，键和值都是byte array
+//在BoltDB中，有两种形式的事务：1.db.Update()：读写事务  2.db.View()：只读事务
 const dbFile = "blockchain_%s.db"
 const blocksBucket = "blocks"
 const genesisCoinbaseData = "The Times 18/Api/2018 Chancellor on brink of second bailout for banks"
@@ -65,6 +71,9 @@ func CreateBlockchain(address, nodeID string) *Blockchain {
 	return &bc
 }
 
+//1.检查DB中是否有一个区块链
+//2.如果存在，打开DB
+//3.获取存储区块的bucket，并将1键更新为存储连中的最后一个块的hash
 func NewBlockchain(nodeID string) *Blockchain {
 	dbFile := fmt.Sprintf(dbFile, nodeID)
 	if dbExists(dbFile) == false {
@@ -127,6 +136,9 @@ func (bc *Blockchain) AddBlock(block *Block) {
 	}
 }
 
+//FindTransaction 通过 ID 找到一笔交易（这需要在区块链上迭代所有区块）
+//找到有所需数量的输出
+//对所有未花费交易进行迭代，并对它的值进行累加，当累加值超过我们想要的值时，返回。
 func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 	bci := bc.Iterator()
 
@@ -147,6 +159,9 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 	return Transaction{}, errors.New("Transaction is not found.")
 }
 
+//找到一个公钥哈希的未花费输出，然后用来获取余额
+//获取余额需要扫描整个区块链，同时如果我们想要验证后续交易，也需要花费很长时间
+//找到UTXO集会加快交易相关的操作
 func (bc *Blockchain) FindUTXO() map[string]TXOutputs {
 	UTXO := make(map[string]TXOutputs)
 	spentTXOs := make(map[string][]int)
@@ -189,6 +204,8 @@ func (bc *Blockchain) FindUTXO() map[string]TXOutputs {
 	return UTXO
 }
 
+//区块链的迭代
+//迭代器的初始状态为链中的tip，因此区块将从尾到头进行获取
 func (bc *Blockchain) Iterator() *BlockchainIterator {
 	bci := &BlockchainIterator{bc.tip, bc.db}
 
@@ -303,6 +320,7 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) *Block {
 	return newBlock
 }
 
+//传入一笔交易，找到它引用的交易，然后对它进行签名
 func (bc *Blockchain) SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey) {
 	prevTXs := make(map[string]Transaction)
 

@@ -42,6 +42,7 @@ func (b *Block) HashTransactions() []byte {
 	return mTree.RootNode.Data
 }
 
+//从Go struct转换到一个byte array
 func (b *Block) Serialize() []byte {
 	var result bytes.Buffer
 	encoder := gob.NewEncoder(&result)
@@ -54,6 +55,7 @@ func (b *Block) Serialize() []byte {
 	return result.Bytes()
 }
 
+//从byte array转换到Go struct
 func DeserializeBlock(d []byte) *Block {
 	var block Block
 
