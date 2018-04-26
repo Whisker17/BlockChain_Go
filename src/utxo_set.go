@@ -15,6 +15,8 @@ type UTXOSet struct {
 }
 
 //迭代找到可以使用的UTXO
+//找到有所需数量的输出
+//对所有未花费交易进行迭代，并对它的值进行累加，当累加值超过我们想要的值时，返回。
 func (u UTXOSet) FindSpendableOutput(pubkeyHash []byte, amount int) (int, map[string][]int) {
 	unspentOutputs := make(map[string][]int)
 	accumulated := 0
@@ -25,9 +27,11 @@ func (u UTXOSet) FindSpendableOutput(pubkeyHash []byte, amount int) (int, map[st
 		c := b.Cursor()
 
 		for k, v := c.First(); k != nil; k, v = c.Next() {
+			//将[]byte类型转换成string
 			txID := hex.EncodeToString(k)
 			outs := DeserializeOutputs(v)
 
+			//迭代寻找满足特定公钥的UTXO
 			for outIdx, out := range outs.Outputs {
 				if out.IsLockedWithKey(pubkeyHash) && accumulated < amount {
 					accumulated += out.Value
@@ -54,10 +58,12 @@ func (u UTXOSet) FindUTXO(pubkeyHash []byte) []TXOutput {
 		b := tx.Bucket([]byte(utxoBucket))
 		c := b.Cursor()
 
+		//bucket的遍历，选出满足要求的UTXO
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			outs := DeserializeOutputs(v)
 
 			for _, out := range outs.Outputs {
+				//选出特定公钥的UTXO
 				if out.IsLockedWithKey(pubkeyHash) {
 					UTXOs = append(UTXOs, out)
 				}
@@ -73,6 +79,7 @@ func (u UTXOSet) FindUTXO(pubkeyHash []byte) []TXOutput {
 	return UTXOs
 }
 
+//统计UTXO集中的交易数量
 func (u UTXOSet) CountTransactions() int {
 	db := u.Blockchain.db
 	counter := 0

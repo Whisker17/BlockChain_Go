@@ -56,6 +56,8 @@ func (w Wallet) GetAddress() []byte {
 	return address
 }
 
+//对公钥进行Hash
+//先进行一次sha256，然后一次RIPEMD-160
 func HashPubKey(pubKey []byte) []byte {
 	publicSHA256 := sha256.Sum256(pubKey)
 

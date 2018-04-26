@@ -29,6 +29,7 @@ func (tx Transaction) IsCoinbase() bool {
 	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
 }
 
+//序列化，根据地址随机生成一个
 func (tx Transaction) Serialize() []byte {
 	var encoded bytes.Buffer
 
@@ -41,6 +42,7 @@ func (tx Transaction) Serialize() []byte {
 	return encoded.Bytes()
 }
 
+//生成一个交易的Hash
 func (tx *Transaction) Hash() []byte {
 	var hash [32]byte
 
@@ -76,9 +78,12 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 	//将会被签署的是修剪后的交易副本，而不是一个完整交易
 	txCopy := tx.TrimmedCopy()
 
+	//
 	for inID, vin := range txCopy.Vin {
+		//迭代prevTXs中的交易
 		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
 		txCopy.Vin[inID].Signature = nil
+		//Hash 方法对交易进行序列化，并使用 SHA-256 算法进行哈希。哈希后的结果就是我们要签名的数据。
 		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
 
 		dataToSign := fmt.Sprintf("%x\n", txCopy)
@@ -91,7 +96,6 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 		}
 		signature := append(r.Bytes(), s.Bytes()...)
 
-		//Hash 方法对交易进行序列化，并使用 SHA-256 算法进行哈希。哈希后的结果就是我们要签名的数据。
 		//在获取完哈希，我们应该重置 PubKey 字段，以便于它不会影响后面的迭代。
 		tx.Vin[inID].Signature = signature
 		txCopy.Vin[inID].PubKey = nil
@@ -120,6 +124,7 @@ func (tx Transaction) String() string {
 }
 
 //这个副本包含了所有的输入和输出，但是 TXInput.Signature 和 TXIput.PubKey 被设置为 nil
+//因为Signature和PubKey需要在签名时被重置
 func (tx *Transaction) TrimmedCopy() Transaction {
 	var inputs []TXInput
 	var outputs []TXOutput
@@ -206,23 +211,29 @@ func NewCoinbaseTX(to, data string) *Transaction {
 	return &tx
 }
 
+//新建一个UTXO交易
 func NewUTXOTransaction(wallet *Wallet, to string, amount int, UTXOSet *UTXOSet) *Transaction {
 	var inputs []TXInput
 	var outputs []TXOutput
 
+	//对公钥加密（一次sha256，一次RIPEMD-160）
 	pubKeyHash := HashPubKey(wallet.PublicKey)
-	acc, validOutputs := UTXOSet.FinSpendableOutputs(pubKeyHash, amount)
+	//在UTXO集中找到满足此公钥的UTXO
+	acc, validOutputs := UTXOSet.FindSpendableOutput(pubKeyHash, amount)
 
 	if acc < amount {
 		log.Panic("ERROR: Not enough funds")
 	}
 
+	//遍历UTXO集中选出的UTXO
 	for txid, outs := range validOutputs {
+		//将string类型转换成[]byte
 		txID, err := hex.DecodeString(txid)
 		if err != nil {
 			log.Panic(err)
 		}
 
+		//遍历UTXO集中选出的UTXO，并借此生成TXInput
 		for _, out := range outs {
 			input := TXInput{txID, out, nil, wallet.PublicKey}
 			inputs = append(inputs, input)
@@ -231,17 +242,21 @@ func NewUTXOTransaction(wallet *Wallet, to string, amount int, UTXOSet *UTXOSet)
 
 	from := fmt.Sprintf("%s", wallet.GetAddress())
 	outputs = append(outputs, *NewTXOutput(amount, to))
+	//如果选出的UTXO中余额总值大于所需，则多生成一个新的TXOutput
 	if acc > amount {
 		outputs = append(outputs, *NewTXOutput(acc-amount, from))
 	}
 
+	//生成交易
 	tx := Transaction{nil, inputs, outputs}
 	tx.ID = tx.Hash()
-	UTXOSet.Blockchain.SignTransaction(&tx, wallet.PublicKey)
+	//对该新生成的交易进行数字签名
+	UTXOSet.Blockchain.SignTransaction(&tx, wallet.PrivateKey)
 
 	return &tx
 }
 
+//将[]byte类型转换成Transaction
 func DeserializeTransaction(data []byte) Transaction {
 	var transaction Transaction
 

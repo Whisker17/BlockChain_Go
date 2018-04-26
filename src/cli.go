@@ -10,6 +10,7 @@ import (
 
 type CLI struct{}
 
+//脚本的使用说明
 func (cli *CLI) printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  createblockchain -address ADDRESS - Create a blockchain and send genesis block reward to ADDRESS")
@@ -113,7 +114,7 @@ func (cli *CLI) Run() {
 			createBlockchainCmd.Usage()
 			os.Exit(1)
 		}
-		cli.getBalance(*getBalanceAddress, nodeID)
+		cli.createBlockchain(*getBalanceAddress, nodeID)
 	}
 
 	if createWalletCmd.Parsed() {
@@ -152,10 +153,14 @@ func (cli *CLI) Run() {
 	}
 }
 
+//创建区块链
 func (cli *CLI) createBlockchain(address, nodeID string) {
+	//验证地址是否正确
+	//wallet.go/func ValidateAddress(address string) bool
 	if !ValidateAddress(address) {
 		log.Panic("ERROR: Address is not valid")
 	}
+	//创建区块链
 	bc := CreateBlockchain(address, nodeID)
 	defer bc.db.Close()
 
@@ -165,6 +170,7 @@ func (cli *CLI) createBlockchain(address, nodeID string) {
 	fmt.Println("Done!")
 }
 
+//创建钱包
 func (cli *CLI) createWallet(nodeID string) {
 	wallets, _ := NewWallets(nodeID)
 	address := wallets.CreateWallet()
@@ -173,7 +179,9 @@ func (cli *CLI) createWallet(nodeID string) {
 	fmt.Printf("Your new address: %s\n", address)
 }
 
+//获得账本的余额状态
 func (cli *CLI) getBalance(address, nodeID string) {
+	//验证地址正确性
 	if !ValidateAddress(address) {
 		log.Panic("ERROR: Address is not valid")
 	}
@@ -182,8 +190,10 @@ func (cli *CLI) getBalance(address, nodeID string) {
 	defer bc.db.Close()
 
 	balance := 0
+	//对经过base58编码后的地址进行解码获得公钥
 	pubKeyHash := Base58Decode([]byte(address))
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
+	//找到UTXO集中特定公钥的余额状态
 	UTXOs := UTXOSet.FindUTXO(pubKeyHash)
 
 	for _, out := range UTXOs {
@@ -193,6 +203,7 @@ func (cli *CLI) getBalance(address, nodeID string) {
 	fmt.Printf("Balance of '%s': %d\n", address, balance)
 }
 
+//获得区块链中所有交易的地址
 func (cli *CLI) listAddresses(nodeID string) {
 	wallets, err := NewWallets(nodeID)
 	if err != nil {
@@ -205,10 +216,12 @@ func (cli *CLI) listAddresses(nodeID string) {
 	}
 }
 
+//输出区块链
 func (cli *CLI) printChain(nodeID string) {
 	bc := NewBlockchain(nodeID)
 	defer bc.db.Close()
 
+	//区块链的迭代器
 	bci := bc.Iterator()
 
 	for {
@@ -230,11 +243,13 @@ func (cli *CLI) printChain(nodeID string) {
 	}
 }
 
+//对UTXO集的刷新
 func (cli *CLI) reindexUTXO(nodeID string) {
 	bc := NewBlockchain(nodeID)
 	UTXOSet := UTXOSet{bc}
 	UTXOSet.Reindex()
 
+	//重新统计UTXO集中的交易数
 	count := UTXOSet.CountTransactions()
 	fmt.Printf("Done! There are %d transactions in the UTXO set.\n", count)
 }
@@ -244,6 +259,7 @@ func (cli *CLI) reindexUTXO(nodeID string) {
 //coinbase 交易只有一个输出，里面包含了矿工的公钥哈希。
 //实现奖励，非常简单，更新 send 即可
 func (cli *CLI) send(from, to string, amount int, nodeID string, mineNow bool) {
+	//验证地址正确性
 	if !ValidateAddress(from) {
 		log.Panic("ERROR: Sender address is not valid")
 	}
@@ -263,6 +279,7 @@ func (cli *CLI) send(from, to string, amount int, nodeID string, mineNow bool) {
 
 	tx := NewUTXOTransaction(&wallet, to, amount, &UTXOSet)
 
+	//挖矿节点挖出新的块
 	if mineNow {
 		cbTx := NewCoinbaseTX(from, "")
 		txs := []*Transaction{cbTx, tx}

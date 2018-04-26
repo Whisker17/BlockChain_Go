@@ -26,8 +26,10 @@ type Blockchain struct {
 	db  *bolt.DB
 }
 
+//创建区块链
 func CreateBlockchain(address, nodeID string) *Blockchain {
 	dbFile := fmt.Sprintf(dbFile, nodeID)
+	//如果区块链已存在，则返回
 	if dbExists(dbFile) {
 		fmt.Println("Blockchain already exists.")
 		os.Exit(1)
@@ -35,14 +37,17 @@ func CreateBlockchain(address, nodeID string) *Blockchain {
 
 	var tip []byte
 
+	//创建区块链，首先要先创建一个Coinbase交易，然后基于此交易创建一个创世区块
 	cbtx := NewCoinbaseTX(address, genesisCoinbaseData)
 	genesis := NewGenesisBlock(cbtx)
 
+	//打开要存放区块链的DB
 	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
 		log.Panic(err)
 	}
 
+	//将新建的区块链写入DB中
 	err = db.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucket([]byte(blocksBucket))
 		if err != nil {
@@ -137,8 +142,6 @@ func (bc *Blockchain) AddBlock(block *Block) {
 }
 
 //FindTransaction 通过 ID 找到一笔交易（这需要在区块链上迭代所有区块）
-//找到有所需数量的输出
-//对所有未花费交易进行迭代，并对它的值进行累加，当累加值超过我们想要的值时，返回。
 func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 	bci := bc.Iterator()
 
@@ -151,6 +154,7 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 			}
 		}
 
+		//如果区块为Coinbase区块（即没有PrevBlockHash），则跳出迭代
 		if len(block.PrevBlockHash) == 0 {
 			break
 		}
@@ -270,6 +274,7 @@ func (bc *Blockchain) GetBlockHashes() [][]byte {
 	return blocks
 }
 
+//挖矿的过程
 func (bc *Blockchain) MineBlock(transactions []*Transaction) *Block {
 	var lastHash []byte
 	var lastHeight int
@@ -320,11 +325,13 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) *Block {
 	return newBlock
 }
 
-//传入一笔交易，找到它引用的交易，然后对它进行签名
+//传入一笔交易，找到它引用的交易，然后对它进行数字签名
+//数字签名的过程就是在区块链中找到交易，并对其中所有TXInput进行privKey的签名
 func (bc *Blockchain) SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey) {
 	prevTXs := make(map[string]Transaction)
 
 	for _, vin := range tx.Vin {
+		//找到区块链中特定id的交易
 		prevTX, err := bc.FindTransaction(vin.Txid)
 		if err != nil {
 			log.Panic(err)
