@@ -281,6 +281,7 @@ func (cli *CLI) send(from, to string, amount int, nodeID string, mineNow bool) {
 
 	//挖矿节点挖出新的块
 	if mineNow {
+		//新建一个Coinbase区块
 		cbTx := NewCoinbaseTX(from, "")
 		txs := []*Transaction{cbTx, tx}
 

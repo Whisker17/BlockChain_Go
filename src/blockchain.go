@@ -279,6 +279,7 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) *Block {
 	var lastHash []byte
 	var lastHeight int
 
+	//遍历验证交易集中的交易均为有效交易
 	for _, tx := range transactions {
 		if bc.VerifyTransaction(tx) != true {
 			log.Panic("ERROR: Invalid transaction")
@@ -342,13 +343,16 @@ func (bc *Blockchain) SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey)
 	tx.Sign(privKey, prevTXs)
 }
 
+//验证交易有效性
 func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
+	//Coinbase为有效交易
 	if tx.IsCoinbase() {
 		return true
 	}
 
 	prevTXs := make(map[string]Transaction)
 
+	//遍历找出所有交易集中的交易
 	for _, vin := range tx.Vin {
 		prevTX, err := bc.FindTransaction(vin.Txid)
 		if err != nil {
@@ -360,6 +364,7 @@ func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
 	return tx.Verify(prevTXs)
 }
 
+//验证数据库是否存在
 func dbExists(dbFile string) bool {
 	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
 		return false
