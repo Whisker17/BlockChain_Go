@@ -107,6 +107,7 @@ func NewBlockchain(nodeID string) *Blockchain {
 	return &bc
 }
 
+//增加区块
 func (bc *Blockchain) AddBlock(block *Block) {
 	err := bc.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
@@ -216,6 +217,7 @@ func (bc *Blockchain) Iterator() *BlockchainIterator {
 	return bci
 }
 
+//遍历数据库，得到区块链的最大高度
 func (bc *Blockchain) GetBestHeight() int {
 	var lastBlock Block
 
@@ -234,6 +236,7 @@ func (bc *Blockchain) GetBestHeight() int {
 	return lastBlock.Height
 }
 
+//根据Hash值找到区块
 func (bc *Blockchain) GetBlock(blockHash []byte) (Block, error) {
 	var block Block
 
@@ -257,6 +260,7 @@ func (bc *Blockchain) GetBlock(blockHash []byte) (Block, error) {
 	return block, nil
 }
 
+//返回区块链的Hash
 func (bc *Blockchain) GetBlockHashes() [][]byte {
 	var blocks [][]byte
 	bci := bc.Iterator()

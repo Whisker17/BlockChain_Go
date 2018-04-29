@@ -16,6 +16,7 @@ type Block struct {
 	Height        int
 }
 
+//根据现在的时间新建一个块
 func NewBlock(transactions []*Transaction, prevBlockHash []byte, height int) *Block {
 	block := &Block{time.Now().Unix(), transactions, prevBlockHash, []byte{}, 0, height}
 	pow := NewProofOfWork(block)
@@ -27,10 +28,12 @@ func NewBlock(transactions []*Transaction, prevBlockHash []byte, height int) *Bl
 	return block
 }
 
+//新建一个创世区块
 func NewGenesisBlock(coinbase *Transaction) *Block {
 	return NewBlock([]*Transaction{coinbase}, []byte{}, 0)
 }
 
+//对交易进行Hash处理，返回Merkle树的根节点
 func (b *Block) HashTransactions() []byte {
 	var transactions [][]byte
 

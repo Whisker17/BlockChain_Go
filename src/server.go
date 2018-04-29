@@ -151,6 +151,7 @@ func sendData(addr string, data []byte) {
 	}
 }
 
+//发送清单
 func sendInv(address, kind string, items [][]byte) {
 	inventory := inv{nodeAddress, kind, items}
 	payload := gobEncode(inventory)
@@ -430,6 +431,7 @@ func handleVersion(request []byte, bc *Blockchain) {
 	}
 }
 
+//对不同指令的操作
 func handleConnection(conn net.Conn, bc *Blockchain) {
 	request, err := ioutil.ReadAll(conn)
 	if err != nil {
@@ -460,9 +462,10 @@ func handleConnection(conn net.Conn, bc *Blockchain) {
 	conn.Close()
 }
 
+//打开服务器
 func StartServer(nodeID, minerAddress string) {
 	nodeAddress = fmt.Sprintf("localhost:%s", nodeID)
-	miningAddress = miningAddress
+	miningAddress = minerAddress
 	ln, err := net.Listen(protocol, nodeAddress)
 	if err != nil {
 		log.Panic(err)
@@ -484,6 +487,7 @@ func StartServer(nodeID, minerAddress string) {
 	}
 }
 
+//将数据进行编码
 func gobEncode(data interface{}) []byte {
 	var buff bytes.Buffer
 
@@ -496,6 +500,7 @@ func gobEncode(data interface{}) []byte {
 	return buff.Bytes()
 }
 
+//检测节点是否已知
 func nodeIsKnown(addr string) bool {
 	for _, node := range knownNodes {
 		if node == addr {
