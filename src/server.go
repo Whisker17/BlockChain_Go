@@ -70,6 +70,7 @@ type verzion struct {
 	AddrFrom   string
 }
 
+//将string类型的命令转换成[]byte
 func commandToBytes(command string) []byte {
 	var bytes [commandLength]byte
 
@@ -80,6 +81,7 @@ func commandToBytes(command string) []byte {
 	return bytes[:]
 }
 
+//将[]byte转换成string类型
 func bytesToCommand(bytes []byte) string {
 	var command []byte
 
@@ -92,6 +94,7 @@ func bytesToCommand(bytes []byte) string {
 	return fmt.Sprintf("%s", command)
 }
 
+//从[]byte中提取出命令
 func extractCommand(request []byte) []byte {
 	return request[:commandLength]
 }
@@ -102,6 +105,7 @@ func requestBlocks() {
 	}
 }
 
+//发送地址信息
 func sendAddr(address string) {
 	nodes := addr{knownNodes}
 	nodes.AddrList = append(nodes.AddrList, nodeAddress)
@@ -111,6 +115,7 @@ func sendAddr(address string) {
 	sendData(address, request)
 }
 
+//发送块
 func sendBlock(addr string, b *Block) {
 	data := block{nodeAddress, b.Serialize()}
 	payload := gobEncode(data)
@@ -119,12 +124,15 @@ func sendBlock(addr string, b *Block) {
 	sendData(addr, request)
 }
 
+//发送数据
 func sendData(addr string, data []byte) {
+	//使用tcp方式与特定端口进行通信
 	conn, err := net.Dial(protocol, addr)
 	if err != nil {
 		fmt.Printf("%s is not available\n", addr)
 		var updatedNodes []string
 
+		//更新地址
 		for _, node := range knownNodes {
 			if node != addr {
 				updatedNodes = append(updatedNodes, node)
@@ -165,6 +173,7 @@ func sendGetData(address, kind string, id []byte) {
 	sendData(address, request)
 }
 
+//发送交易
 func sendTx(addr string, tnx *Transaction) {
 	data := tx{nodeAddress, tnx.Serialize()}
 	payload := gobEncode(data)
