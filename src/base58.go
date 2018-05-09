@@ -7,6 +7,7 @@ import (
 
 var b58Alphabet = []byte("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
 
+//Base58编码
 func Base58Encode(input []byte) []byte {
 	var result []byte
 

@@ -12,6 +12,7 @@ type MerkleNode struct {
 	Data  []byte
 }
 
+//新建Merkle树
 func NewMerkleTree(data [][]byte) *MerkleTree {
 	var nodes []MerkleNode
 
@@ -28,6 +29,7 @@ func NewMerkleTree(data [][]byte) *MerkleTree {
 	for i := 0; i < len(data)/2; i++ {
 		var newLevel []MerkleNode
 
+		//新建下一层
 		for j := 0; j < len(nodes); j += 2 {
 			node := NewMerkleNode(&nodes[j], &nodes[j+1], nil)
 			newLevel = append(newLevel, *node)
@@ -41,6 +43,7 @@ func NewMerkleTree(data [][]byte) *MerkleTree {
 	return &mTree
 }
 
+//新建Merkle节点
 func NewMerkleNode(left, right *MerkleNode, data []byte) *MerkleNode {
 	mNode := MerkleNode{}
 

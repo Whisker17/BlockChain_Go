@@ -25,6 +25,8 @@ type Transaction struct {
 	Vout []TXOutput
 }
 
+//判断是否是Coinbase交易
+//判断方法：tx.Vin长度为1且tx.Vin[0].Txid为0tx.Vin[0].Vout为-1
 func (tx Transaction) IsCoinbase() bool {
 	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
 }
