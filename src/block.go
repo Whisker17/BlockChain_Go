@@ -48,8 +48,8 @@ func (b *Block) HashTransactions() []byte {
 //从Go struct转换到一个byte array
 func (b *Block) Serialize() []byte {
 	var result bytes.Buffer
-	encoder := gob.NewEncoder(&result)
 
+	encoder := gob.NewEncoder(&result)
 	err := encoder.Encode(b)
 	if err != nil {
 		log.Panic(err)

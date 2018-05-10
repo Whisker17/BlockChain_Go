@@ -123,10 +123,12 @@ func (bc *Blockchain) AddBlock(block *Block) {
 			log.Panic(err)
 		}
 
+		//取出区块链中的上一个块
 		lastHash := b.Get([]byte("1"))
 		lastBlockData := b.Get(lastHash)
 		lastBlock := DeserializeBlock(lastBlockData)
 
+		//如果块的高度高于原本区块链中最后一块的高度，则写入
 		if block.Height > lastBlock.Height {
 			err = b.Put([]byte("1"), block.Hash)
 			if err != nil {
@@ -175,11 +177,13 @@ func (bc *Blockchain) FindUTXO() map[string]TXOutputs {
 	for {
 		block := bci.Next()
 
+		//遍历区块的交易集
 		for _, tx := range block.Transactions {
 			txID := hex.EncodeToString(tx.ID)
 
 		Outputs:
 			for outIdx, out := range tx.Vout {
+				//如果该txID的花费集已经存在
 				if spentTXOs[txID] != nil {
 					for _, spentOutIdx := range spentTXOs[txID] {
 						if spentOutIdx == outIdx {
@@ -188,11 +192,13 @@ func (bc *Blockchain) FindUTXO() map[string]TXOutputs {
 					}
 				}
 
+				//增加现在不存在的TXOutputs
 				outs := UTXO[txID]
 				outs.Outputs = append(outs.Outputs, out)
 				UTXO[txID] = outs
 			}
 
+			//只要不是Coinbase块
 			if tx.IsCoinbase() == false {
 				for _, in := range tx.Vin {
 					inTxID := hex.EncodeToString(in.Txid)
